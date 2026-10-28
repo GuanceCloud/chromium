@@ -7,7 +7,7 @@ on:
       mode:
         description: Build configuration
         type: choice
-        options: [dev, release, release-size]
+        options: [dev, release, release-size, release-compact]
         default: dev
       runner:
         description: Existing Linux x64 runner label
