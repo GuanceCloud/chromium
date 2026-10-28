@@ -1,0 +1,33 @@
+# Copy baseline.gn beside args.gn; keep release optimization and V8 snapshots.
+import("baseline.gn")
+
+enable_printing = false
+enable_pdf = false
+enable_media_remoting = false
+
+# Keep CDP, including Page.captureScreenshot; remove standalone CLI commands.
+headless_enable_commands = false
+
+# Select the upstream headless platform without importing the embedding template
+# that disables V8 context snapshots. Keep normal graphics APIs/backends.
+use_ozone = true
+ozone_auto_platforms = false
+ozone_platform = "headless"
+ozone_platform_headless = true
+angle_enable_vulkan = true
+angle_enable_swiftshader = true
+
+# Server-side dialtesting does not need native desktop device/service discovery.
+# Physical audio/Bluetooth/desktop integrations require the baseline build.
+use_alsa = false
+use_bluez = false
+use_cups = false
+use_dbus = false
+use_gio = false
+use_libpci = false
+use_pulseaudio = false
+use_udev = false
+rtc_use_pipewire = false
+use_glib = false
+use_gtk = false
+use_pangocairo = false
