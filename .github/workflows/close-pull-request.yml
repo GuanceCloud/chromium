@@ -10,6 +10,7 @@ on:
 
 jobs:
   run:
+    if: github.repository == 'chromium/chromium'
     runs-on: ubuntu-latest
     steps:
     - uses: superbrothers/close-pull-request@v3

@@ -1,5 +1,9 @@
 # ![Logo](chrome/app/theme/chromium/product_logo_64.png) Chromium
 
+Guance Headless Shell builds are maintained on `3308-headless-shell`, pinned to
+Chromium 156.0.8078.47. See the [build profiles](guance/README.md) and
+[GitHub Actions instructions](guance/CI.md). The `main` branch tracks upstream.
+
 Chromium is an open-source browser project that aims to build a safer, faster,
 and more stable way for all users to experience the web.
 
