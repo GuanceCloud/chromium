@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ $# == 1 && $1 == /* && $1 != / ]] || { echo "Usage: $0 /absolute/build-root" >&2; exit 2; }
+[[ $# -ge 1 && $# -le 2 && $1 == /* && $1 != / ]] || { echo "Usage: $0 /absolute/build-root [amd64|arm64]" >&2; exit 2; }
+arch=${2:-amd64}
+[[ $arch == amd64 || $arch == arm64 ]] || { echo 'Unknown architecture' >&2; exit 2; }
+[[ $(uname -m) == x86_64 ]] || { echo 'Source archive preparation requires a Linux x86_64 build host' >&2; exit 2; }
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(git -C "$script_dir" rev-parse --show-toplevel)
 source "$script_dir/version.env"
@@ -42,6 +45,9 @@ actual=$(awk -F= '{printf "%s%s", sep, $2; sep="."}' chrome/VERSION)
 # scripts fill missing toolchains and reuse their version stamps on warm runs.
 python3 tools/clang/scripts/update.py
 python3 tools/rust/update_rust.py
+if [[ $arch == arm64 ]]; then
+  python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
+fi
 for tool in buildtools/linux64/gn third_party/ninja/ninja; do
   [[ -x $tool ]] || { echo "Missing archive build tool: $tool" >&2; exit 2; }
 done

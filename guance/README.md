@@ -1,6 +1,7 @@
 # Guance Headless Shell
 
-This fork packages Linux x64 Chromium Headless Shell for browser monitoring.
+This fork packages Linux amd64 Chromium Headless Shell for browser monitoring;
+an arm64 cross-build and native verification workflow is available for evaluation.
 The current baseline is Chromium **156.0.8078.47**. Build only the Shell target;
 retain JavaScript JIT, WebAssembly, V8 context snapshots, normal web graphics,
 the Chromium sandbox, site isolation and CDP screenshots.
@@ -24,7 +25,7 @@ production capacity guarantee. A `dev` build disables PGO/ThinLTO and its depend
 CFI hardening for iteration. Use `release` for deployment and for measuring memory
 and throughput.
 
-The experimental `release-size` profile retains PGO, ThinLTO and CFI and enables
+The experimental `release-size` profile retains PGO and ThinLTO and enables
 `optimize_for_size=true`. In this version Blink's default optimization becomes
 `-Os`, while explicitly optimized targets such as base retain `-O2`. GN generation
 has been checked; a full build and comparative memory/latency measurements are
@@ -43,6 +44,10 @@ bash guance/prepare.sh /absolute/build-root
 bash guance/build.sh /absolute/build-root/src dev 4
 bash guance/package.sh /absolute/build-root/src dev /absolute/dist
 ```
+
+The optional final argument `arm64` selects the cross target for all three
+commands. Its package is unverified until the native ARM64 smoke step described
+in CI.md succeeds. Upstream enables CFI by default for Linux amd64, not arm64.
 
 The fixed official archive supplies Chromium dependencies; tracked fork source
 changes are overlaid before compilation, including deletions and file modes.

@@ -17,6 +17,11 @@ on:
         description: Parallel build jobs
         type: string
         default: '4'
+      arch:
+        description: Target architecture
+        type: choice
+        options: [amd64, arm64, both]
+        default: amd64
 
 permissions:
   contents: read
@@ -42,14 +47,19 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/build-dev-')
     needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.arch == 'both' && '["amd64","arm64"]' || inputs.arch == 'arm64' && '["arm64"]' || '["amd64"]') }}
     runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
     concurrency:
-      group: headless-shell-build
+      group: headless-shell-build-${{ matrix.arch }}
       cancel-in-progress: false
     timeout-minutes: 360
     env:
       MODE: ${{ inputs.mode || 'dev' }}
       JOBS: ${{ inputs.jobs || '4' }}
+      ARCH: ${{ matrix.arch }}
       PERSISTENT_ROOT: ${{ vars.HEADLESS_BUILD_ROOT }}
     steps:
       - uses: actions/checkout@v4
@@ -64,11 +74,12 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo 'jobs must be a positive integer' >&2; exit 1; }
+          [[ $(uname -m) == x86_64 ]] || { echo 'Build requires a Linux x86_64 host' >&2; exit 1; }
           if [[ '${{ runner.environment }}' == 'self-hosted' && -n "$PERSISTENT_ROOT" ]]; then
             [[ "$PERSISTENT_ROOT" == /* ]] || { echo 'HEADLESS_BUILD_ROOT must be absolute' >&2; exit 1; }
-            build_root="$PERSISTENT_ROOT"
+            build_root="$PERSISTENT_ROOT/$ARCH"
           else
-            build_root="$RUNNER_TEMP/headless-shell"
+            build_root="$RUNNER_TEMP/headless-shell/$ARCH"
           fi
           mkdir -p "$build_root"
           echo "BUILD_ROOT=$build_root" >> "$GITHUB_ENV"
@@ -81,20 +92,51 @@ jobs:
           fi
       - name: Prepare source
         timeout-minutes: 45
-        run: bash guance/prepare.sh "$BUILD_ROOT"
+        run: bash guance/prepare.sh "$BUILD_ROOT" "$ARCH"
       - name: Install hosted runner dependencies
         if: runner.environment == 'github-hosted'
         run: |
           sudo python3 "$BUILD_ROOT/src/build/install-build-deps.py" --no-prompt --no-arm --no-android --no-chromeos-fonts --no-syms --no-nacl
           sudo apt-get install -y fonts-noto-cjk fonts-liberation
       - name: Build
-        run: bash guance/build.sh "$BUILD_ROOT/src" "$MODE" "$JOBS"
+        run: bash guance/build.sh "$BUILD_ROOT/src" "$MODE" "$JOBS" "$ARCH"
       - name: Package and verify
-        run: bash guance/package.sh "$BUILD_ROOT/src" "$MODE" "$GITHUB_WORKSPACE/dist"
+        run: bash guance/package.sh "$BUILD_ROOT/src" "$MODE" "$GITHUB_WORKSPACE/dist" "$ARCH"
       - uses: actions/upload-artifact@v4
         with:
-          name: headless-shell-linux-x64-${{ inputs.mode || 'dev' }}-${{ github.sha }}
+          name: headless-shell-linux-${{ matrix.arch }}-${{ matrix.arch == 'arm64' && 'unverified' || 'verified' }}-${{ inputs.mode || 'dev' }}-${{ github.sha }}
           path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  verify-arm64:
+    if: github.event_name == 'workflow_dispatch' && (inputs.arch == 'arm64' || inputs.arch == 'both')
+    needs: build
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: guance
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 fonts-noto-cjk fonts-liberation
+      - uses: actions/download-artifact@v4
+        with:
+          name: headless-shell-linux-arm64-unverified-${{ inputs.mode || 'dev' }}-${{ github.sha }}
+          path: incoming
+      - name: Verify screenshot on native ARM64
+        run: python3 guance/verify-arm64.py incoming verified
+      - uses: actions/upload-artifact@v4
+        with:
+          name: headless-shell-linux-arm64-verified-${{ inputs.mode || 'dev' }}-${{ github.sha }}
+          path: verified/
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
