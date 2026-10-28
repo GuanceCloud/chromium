@@ -24,6 +24,13 @@ production capacity guarantee. A `dev` build disables PGO/ThinLTO and its depend
 CFI hardening for iteration. Use `release` for deployment and for measuring memory
 and throughput.
 
+The experimental `release-size` profile retains PGO, ThinLTO and CFI and enables
+`optimize_for_size=true`. In this version Blink's default optimization becomes
+`-Os`, while explicitly optimized targets such as base retain `-O2`. GN generation
+has been checked; a full build and comparative memory/latency measurements are
+still required. No runtime memory saving is claimed for this profile yet. Its
+output directory is separate from the validated release configuration.
+
 The browser itself does not enforce tenant or private-network policy. Keep a
 separate browser/OS boundary across tenants; only share within a trusted tenant.
 Private-network restrictions need a controlled proxy plus an enforced egress

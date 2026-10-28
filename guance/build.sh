@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[[ $# == 3 ]] || { echo "Usage: $0 /absolute/src dev|release jobs" >&2; exit 2; }
+[[ $# == 3 ]] || { echo "Usage: $0 /absolute/src dev|release|release-size jobs" >&2; exit 2; }
 source_dir=$(realpath "$1")
 mode=$2
 jobs=$3
-[[ $mode == dev || $mode == release ]] || { echo 'Mode must be dev or release' >&2; exit 2; }
+[[ $mode == dev || $mode == release || $mode == release-size ]] || { echo 'Unknown build mode' >&2; exit 2; }
 [[ $jobs =~ ^[1-9][0-9]*$ ]] || { echo 'Jobs must be a positive integer' >&2; exit 2; }
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/version.env"
@@ -21,6 +21,9 @@ sed '/^import("baseline.gn")$/d' "$script_dir/lean.gn" >> "$output/args.gn"
 if [[ $mode == dev ]]; then
   # CFI requires ThinLTO. This profile is only for development verification.
   printf '\n# Development only: reduce cold compile/link time.\nchrome_pgo_phase = 0\nuse_thin_lto = false\nis_cfi = false\n' >> "$output/args.gn"
+fi
+if [[ $mode == release-size ]]; then
+  printf '\n# Experimental: measure PSS and throughput before adopting.\noptimize_for_size = true\n' >> "$output/args.gn"
 fi
 # Nested V8 metagen GN invocations also need this restricted root.
 if ! grep -q '^# Guance Headless Shell build scope$' .gn; then

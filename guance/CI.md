@@ -1,8 +1,10 @@
 # Headless Shell CI
 
-The workflow validates the build scripts on every push. A manual run builds Linux x64 Headless Shell in either `dev` or `release` mode. Pushing a tag named `build-dev-*` also starts a `dev` build on the standard runner; ordinary pushes never start a build. No pull request event runs this workflow.
+The workflow validates the build scripts on every push. A manual run builds Linux x64 Headless Shell in `dev`, `release` or experimental `release-size` mode. Pushing a tag named `build-dev-*` also starts a `dev` build on the standard runner; ordinary pushes never start a build. No pull request event runs this workflow.
 
 `dev` disables PGO, ThinLTO and the dependent CFI hardening for faster iteration; its artifact is labeled `dev` and is only for development verification. Use `release` for deployment; it retains the validated PGO, ThinLTO and CFI configuration. Both retain the CDP screenshot capability. A successful build uploads a tarball, `SHA256SUMS`, and `build-info.json` as a workflow artifact; it does not publish a GitHub release.
+
+`release-size` adds `optimize_for_size=true` to the optimized lean configuration without intentionally removing Web APIs. It has passed GN configuration checks with PGO, ThinLTO and CFI enabled, but has not yet completed a full build or a runtime comparison. Compare summed process PSS, private/shared pages, startup and screenshot latency, and functional smoke results with `release`; binary or archive size alone does not establish a memory benefit. It writes to `src/out/Guance-release-size` and never replaces the normal release output.
 
 For a manual run, select the desired branch and mode, an existing Linux x64 runner label, and a positive job count. GitHub only exposes `workflow_dispatch` when the workflow file exists on the repository's default branch. Before that, pushing a `build-dev-*` tag pointing to the desired commit can start a development build; manual release builds require the workflow on the default branch. Tags should be created only by authorized maintainers.
 
