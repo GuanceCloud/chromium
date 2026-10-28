@@ -21,7 +21,7 @@ if [[ ! -f "$stamp" ]]; then
   printf '%s\n' "$SOURCE_SHA256" > "$stamp"
 fi
 [[ $(cat "$stamp") == "$SOURCE_SHA256" ]] || { echo 'Build root belongs to a different source version' >&2; exit 2; }
-git -C "$repo" cat-file -e "$CHROMIUM_BASE^{commit}" 2>/dev/null || 
+git -C "$repo" cat-file -e "$CHROMIUM_BASE^{commit}" 2>/dev/null ||
   git -C "$repo" fetch --depth=1 --filter=blob:none https://github.com/chromium/chromium.git "$CHROMIUM_BASE"
 python3 "$script_dir/overlay.py" "$repo" "$build_root/src" "$CHROMIUM_BASE" "$build_root/overlay-paths.json"
 cd "$build_root/src"
