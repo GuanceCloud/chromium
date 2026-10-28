@@ -11,7 +11,18 @@ archive="$build_root/chromium-$CHROMIUM_VERSION.tar.xz"
 stamp="$build_root/source.sha256"
 if [[ ! -f "$stamp" ]]; then
   if [[ ! -f "$archive" ]]; then
-    curl --fail --location --retry 3 --output "$archive.part" "$SOURCE_URL"
+    if command -v aria2c >/dev/null 2>&1; then
+      # Hosted Ubuntu runners include aria2; parallel ranges reduce cold setup.
+      aria2c --max-connection-per-server=8 --split=8 --min-split-size=16M \
+        --continue=true --allow-overwrite=true --auto-file-renaming=false \
+        --file-allocation=none --connect-timeout=30 --timeout=120 \
+        --max-tries=3 --retry-wait=5 --lowest-speed-limit=16K \
+        --summary-interval=30 --console-log-level=warn \
+        --dir="$build_root" --out="$(basename "$archive.part")" "$SOURCE_URL"
+    else
+      curl --fail --location --retry 2 --connect-timeout 30 --max-time 1800 \
+        --speed-limit 16384 --speed-time 120 --output "$archive.part" "$SOURCE_URL"
+    fi
     mv -- "$archive.part" "$archive"
   fi
   echo "$SOURCE_SHA256  $archive" | sha256sum --check

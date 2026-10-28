@@ -80,6 +80,7 @@ jobs:
             exit 1
           fi
       - name: Prepare source
+        timeout-minutes: 45
         run: bash guance/prepare.sh "$BUILD_ROOT"
       - name: Install hosted runner dependencies
         if: runner.environment == 'github-hosted'
